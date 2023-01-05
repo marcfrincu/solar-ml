@@ -1,0 +1,16 @@
+item {
+	id: 1
+	name: 'faculae'
+}
+item {
+	id: 2
+	name: 'prominence'
+}
+item {
+	id: 3
+	name: 'sunspot'
+}
+item {
+	id: 4
+	name: 'filament'
+}
