@@ -11,6 +11,7 @@ The code is based on [this article](https://medium.com/analytics-vidhya/detectin
 * or Tf-slim: _pip install --upgrade tf_slim_
 * Keras 2.2.4 (neural network library that contains the algorithms we will use): _pip install keras==2.2.4_
 * [ASI ZWO SDK](https://astronomy-imaging-camera.com/software-drivers). Update line 78 in the detect.py script to reflect the path of your ZWO library.
+* zwoasi library: _pip install zwoasi_
 * Other required dependencies. My [article](https://starscape-experiences.space/index.php/2023/01/05/detecting-solar-features-automatically-using-machine-learning/) explains the process.
 
 ## Using
