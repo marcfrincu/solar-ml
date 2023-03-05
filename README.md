@@ -6,6 +6,7 @@ For a full discussion behind the idea and how to train your own model see https:
 The code is based on [this article](https://medium.com/analytics-vidhya/detecting-custom-objects-on-video-stream-with-tensorflow-and-opencv-34406bd0ec9).
 
 ## Requirements
+* Python 3.7.3
 * Tensorflow 1.15.0 (machine learning platform): _pip install tensorflow==1.15.0_
 * or Tf-slim: _pip install --upgrade tf_slim_
 * Keras 2.2.4 (neural network library that contains the algorithms we will use): _pip install keras==2.2.4_
