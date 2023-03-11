@@ -17,7 +17,9 @@ The code is based on [this article](https://medium.com/analytics-vidhya/detectin
 
 ## Using
 Download entire git archive and unzip. 
-Run python ./detect.py -help for information on the options
+Download [TensorFlow models](https://github.com/tensorflow/models) and copy the _object_detection_ folder in your _solar-ml_ unzipped folder.
+Copy the _inference_graph_ and _training_ folders from the _solar_ml_ folder in the _object_detection_folder_.
+Run python ./detect.py -help for information on the options.
 
 Currently you can:
 * Run the model on a prerecorded video: _python ./detect.py -fromrecording PATH_TO_RECORDING_
@@ -26,6 +28,11 @@ Currently you can:
 * Update exposure and gain at runtime by editing the _config_ file
 ## Disclaimer
 The code is distributed as is under no guarantee.
+
+## Tests
+The code has been tested on a Pi4 with 4GB and CPU overcloaked at 2GHz.
+The code has been tested on an Intel Core i7 8th Gen laptop running Windows 10.
+It consumes about 600 Mb RAM.
 
 ## License
 GPL3
