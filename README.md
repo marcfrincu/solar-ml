@@ -23,7 +23,7 @@ Currently you can:
 * Run the model on a prerecorded video: _python ./detect.py -fromrecording PATH_TO_RECORDING_
 * Run the model on a live stream using an USB ZWO ASI camera: _python ./detect.py -gain 37 -exposure 5000_
 * Run the model and save frames with detections: _python ./detect.py -saveframes_. This works on both recorded and live streams. It creates a folder called _saved_frames_with_detection_ and writes timestamped frames in there
-
+* Update exposure and gain at runtime by editing the _config_ file
 ## Disclaimer
 The code is distributed as is under no guarantee.
 
