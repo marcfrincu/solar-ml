@@ -9,6 +9,7 @@ import pathlib
 
 import numpy as np
 import os
+from os.path import join
 import six.moves.urllib as urllib
 import sys
 import tarfile
@@ -79,8 +80,9 @@ ASI_LIBRARY_PATH = 'C:/Users/fmarc/Downloads/ASI_Windows_SDK_V1.27/ASI SDK/lib/x
 asi.init(ASI_LIBRARY_PATH) 
 
 from datetime import datetime
+import time
 
-def run_inference_for_stream(camera, detection_graph, save_frames, livestream):
+def run_inference_for_stream(camera, detection_graph, save_frames, livestream, show_frames_in_ui):
     try:
         image_index = 0
         if (save_frames):
@@ -105,7 +107,13 @@ def run_inference_for_stream(camera, detection_graph, save_frames, livestream):
                     tensor_name)
 
                 df_last = True
+                ml_analysis_interval = 0
+                last_time = time.time()
+                fps_last_time = time.time()
+                fps = 0
                 while True:
+                    crt_time = time.time()
+                    ml_analysis_interval = read_and_apply_config(camera)
                     if (livestream):
                         # print some stats
                         settings = camera.get_control_values()
@@ -113,44 +121,55 @@ def run_inference_for_stream(camera, detection_graph, save_frames, livestream):
                         gain = settings['Gain']
                         exposure = settings['Exposure']
                         if df != df_last:
-                            print('   Gain {gain:d}  Exposure: {exposure:f} Dropped frames: {df:d}'
+                            print('   Gain {gain:d}  Exposure: {exposure:f} μs Dropped frames: {df:d}'
                                 .format(gain=settings['Gain'], exposure=settings['Exposure'], df=df))
                             df_last = df
                         image_np = camera.capture_video_frame()
+                        fps += 1
                     else:
                         ret, image_np = camera.read()
                         if not ret:
                             print("Can't receive frame (stream end?). Exiting ...")
                             break
-
-                    # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-                    image_np_expanded = np.expand_dims(image_np, axis=0)
-                    # Actual detection.
-                    output_dict = run_inference_for_single_image(image_np, detection_graph, tensor_dict, sess)
-                    # Visualization of the results of a detection.
-                    vis_util.visualize_boxes_and_labels_on_image_array(
-                        image_np,
-                        output_dict['detection_boxes'],
-                        output_dict['detection_classes'],
-                        output_dict['detection_scores'],
-                        category_index,
-                        instance_masks=output_dict.get('detection_masks'),
-                        use_normalized_coordinates=True,
-                        line_thickness=4)
-                    cv2.imshow('object_detection', cv2.resize(image_np, (800, 600)))
-                    if (save_frames and len(output_dict) > 0):
-                        current_dateTime = datetime.now()
-                        timestamp = str(current_dateTime.year) + str(current_dateTime.month) + str(current_dateTime.day) + "-" + str(current_dateTime.hour) + str(current_dateTime.minute) + str(current_dateTime.second)
-                        filename = 'image_' + timestamp + '_' + str(image_index) + '.png'
-                        print ('Saving image with detections to ' + filename)
-                        cv2.imwrite('saved_frames_with_detection/' + filename, image_np)
-                        image_index += 1
+                    if crt_time - fps_last_time >= 1: # display FPS
+                        fps_last_time = crt_time
+                        print ("FPS at " + time.ctime(crt_time)  + ": " + str(fps))
+                        fps = 0
+                    if crt_time - last_time >= ml_analysis_interval: # in seconds
+                        last_time = crt_time                    
+                        # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+                        image_np_expanded = np.expand_dims(image_np, axis=0)
+                        # Actual detection.
+                        output_dict = run_inference_for_single_image(image_np, detection_graph, tensor_dict, sess)
+                        # Visualization of the results of a detection.
+                        vis_util.visualize_boxes_and_labels_on_image_array(
+                            image_np,
+                            output_dict['detection_boxes'],
+                            output_dict['detection_classes'],
+                            output_dict['detection_scores'],
+                            category_index,
+                            instance_masks=output_dict.get('detection_masks'),
+                            use_normalized_coordinates=True,
+                            line_thickness=4)
+       
+                        if (save_frames and len(output_dict) > 0):
+                            current_dateTime = datetime.now()
+                            timestamp = str(current_dateTime.year) + str(current_dateTime.month) + str(current_dateTime.day) + "-" + str(current_dateTime.hour) + str(current_dateTime.minute) + str(current_dateTime.second)
+                            filename = 'image_' + timestamp + '_' + str(image_index) + '.png'
+                            print ('Saving image with detections in saved_frames_with_detection/' + filename)
+                            cv2.imwrite('saved_frames_with_detection/' + filename, image_np)
+                            image_index += 1
+                    if show_frames_in_ui == True:
+                        dims = np.shape(image_np)
+                        scale = 0.7
+                        cv2.imshow('Solar ML', cv2.resize(image_np, (int(dims[1] * scale), int(dims[0] * scale))))    
                     if cv2.waitKey(25) & 0xFF == ord('q'):
                         if livestream:
                             camera.stop_video_capture()
                         else:
                             camera.release()
-                        cv2.destroyAllWindows()
+                        if show_frames_in_ui == True:
+                            cv2.destroyAllWindows()
                         break
     except Exception as e:
         print(e)
@@ -159,18 +178,44 @@ def run_inference_for_stream(camera, detection_graph, save_frames, livestream):
         else:
             camera.release()
 
-# usage ./detect.py -gain 37 -exposure 5000 -fromrecording RECORDING_PATH -saveframes
+def read_and_apply_config(camera):
+    ml_analysis_interval = 0
+    try:
+        f = open(join(os.path.realpath(os.path.dirname(__file__)),"config"), "r")
+        content = f.read()
+        lines = content.split("\n")
+        for line in lines:
+            setting = line.split("=")
+            if len(setting) < 2:
+                continue
+            if setting[0] == "gain":
+                camera.set_control_value(asi.ASI_GAIN, int(setting[1]))
+            if setting[0] == "exposure":
+                camera.set_control_value(asi.ASI_EXPOSURE, int(setting[1]))
+            if setting[0] == "ml_analysis_interval":
+                ml_analysis_interval = int(setting[1])
+    except Exception as e:
+        print(e)
+    finally:
+        f.close()
+        return ml_analysis_interval
+
+# usage ./detect.py -gain 37 -exposure 5000 -fromrecording RECORDING_PATH -saveframes -showui
 # usage ./detect.py -help
 def main():
     args = sys.argv[1:]
 
     if ('-help' in args):
-        print('Usage ./detect.py -gain 37 -exposure 5000 -fromrecording RECORDING_PATH -saveframes\nAll arguments are optional.\n-gain positive integer (0-100) sets the gain value.\n-exposure positive integer sets exposure time in microseconds.\n-fromrecording specifies an existing recording. Gain and exposure parameters have no effect in this case.\n-saveframes saves frames with detections inside the saved_frames_with_detection folder.')
+        print('Usage ./detect.py -gain 37 -exposure 5000 -fromrecording RECORDING_PATH -saveframes -showui\nAll arguments are optional.\n-gain positive integer (0-100) sets the gain value.\n-exposure positive integer sets exposure time in microseconds.\n-fromrecording specifies an existing recording. Gain and exposure parameters have no effect in this case.\n-saveframes saves frames with detections inside the saved_frames_with_detection folder.\n-showui starts the GUI to display the detections in realtime. Otherwise the script just saves them to disk.')
         return
 
     save_frames = False
     if ('-saveframes' in args):
         save_frames = True
+
+    show_frames_in_ui = False
+    if ('-showui' in args):
+        show_frames_in_ui = True
 
     livestream = True
     if ('-fromrecording' in args):
@@ -207,7 +252,7 @@ def main():
         exposure_value = 5000  # in microseconds
         if ('-exposure' in args):
             exposure_index = args.index('-exposure')
-            if (len(args) > gain_index + 1):
+            if (len(args) > exposure_index + 1):
                 exposure_value = int(args[exposure_index + 1])
         camera.set_control_value(asi.ASI_EXPOSURE, exposure_value)
 
@@ -215,7 +260,7 @@ def main():
         #camera.set_control_value(asi.ASI_WB_R, 75)
         #camera.set_control_value(asi.ASI_GAMMA, 50)
         camera.set_control_value(asi.ASI_BRIGHTNESS, 9)
-        camera.set_control_value(asi.ASI_FLIP, 1) # flip horizontally
+        camera.set_control_value(asi.ASI_FLIP, 1) # flip horizontally ?? doc does not specify
 
         camera.set_image_type(asi.ASI_IMG_RGB24)
 
@@ -226,7 +271,7 @@ def main():
         camera.start_video_capture()     
 
     detection_graph = load_model()
-    run_inference_for_stream(camera, detection_graph, save_frames, livestream)
+    run_inference_for_stream(camera, detection_graph, save_frames, livestream, show_frames_in_ui)
 
 if __name__ == "__main__":
     main()
