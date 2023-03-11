@@ -33,7 +33,7 @@ Currently you can:
 The code is distributed as is under no guarantee.
 
 ## Tests
-The code has been tested on a Pi4 with 4GB and CPU overcloaked at 2GHz.
+The code has been tested on a Pi4 with 4GB and CPU overcloaked at 2GHz. Pi Zeros are too weak to run the models.
 
 The code has been tested on an Intel Core i7 8th Gen laptop running Windows 10.
 
